@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "ether.h"
+#include <arpa/inet.h>
+#include "arp.h"
+
 
 #define MAX_PACKET_SIZE 2048
 
@@ -17,9 +20,7 @@ void print_mac(unsigned char mac[6]) {
             printf(":");
         }
     }
-    printf("\n");
 }
-
 
 
 typedef struct {
@@ -48,10 +49,26 @@ int main() {
         memcpy(pkt.data, buffer, n);
         pkt.length = n;
         struct eth_hdr* hdr = parse_eth_hdr(buffer);
-        print_mac(hdr->dmac);
-        print_mac(hdr->smac);
-        
-        
+
+        if(ntohs(hdr->ethertype) == ETH_P_ARP) {
+            printf("Source MAC:");
+            print_mac(hdr->smac);
+            printf("\n");
+            printf("Destination MAC:");
+            print_mac(hdr->dmac);
+            printf("\n");
+            printf("payload: %p\n", hdr->payload);
+            printf("\n\n");
+            struct arp_ipv4* arp = parse_arp_ipv4(hdr->payload);
+
+            struct in_addr saddr;
+            saddr.s_addr = arp->sip;
+            struct in_addr daddr;
+            daddr.s_addr = arp->dip;
+            printf("sip: %s | dip: %s \n", inet_ntoa(saddr), inet_ntoa(daddr));
+        }
+
+
     }
 
     return 0;

@@ -4,7 +4,9 @@ project(TCP-IP VERSION 0.1.0 LANGUAGES C)
 include(CTest)
 enable_testing()
 
-add_executable(TCP-IP main.c tun_if.h tun_if.c utils.h utils.c ether.h ether.c) 
+add_executable(${PROJECT_NAME} main.c tun_if.c utils.c ether.c
+        arp.h
+        arp.c)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
