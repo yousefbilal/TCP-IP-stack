@@ -1,13 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
-#include "arp.h"
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
 #include "tun_if.h"
+#include "arp.h"
 
 arp_hdr *parse_arp(unsigned char *buffer) {
     return (arp_hdr *) buffer;
@@ -23,36 +21,35 @@ void set_entry(table_entry *node, uint32_t key, unsigned char value[6]) {
     node->next = NULL;
 }
 
-void init_translation_table(translation_table *table) {
-    table->capacity = CAPACITY;
-    table->size = 0;
-    table->arr = (table_entry **) malloc(sizeof(table_entry *) * table->capacity);
+void init_translation_table() {
+    arp_table.capacity = CAPACITY;
+    arp_table.size = 0;
+    arp_table.arr = (table_entry **) malloc(sizeof(table_entry *) * arp_table.capacity);
 }
 
-uint32_t hash_function(translation_table *table, uint32_t key) {
+uint32_t hash_function(uint32_t key) {
     key = ((key >> 16) ^ key) * 0x45d9f3b;
     key = ((key >> 16) ^ key) * 0x45d9f3b;
     key = (key >> 16) ^ key;
-    return key % table->capacity;
+    return key % arp_table.capacity;
 }
 
-void insert(translation_table *table, uint32_t key, unsigned char value[6]) {
-    uint32_t bucket_index = hash_function(table, key);
+void insert(uint32_t key, unsigned char value[6]) {
+    uint32_t bucket_index = hash_function(key);
     table_entry *entry = malloc(sizeof(table_entry));
     set_entry(entry, key, value);
-    if (table->arr[bucket_index] == NULL) {
-        table->arr[bucket_index] = entry;
+    if (arp_table.arr[bucket_index] == NULL) {
+        arp_table.arr[bucket_index] = entry;
     } else {
-        entry->next = table->arr[bucket_index];
-        table->arr[bucket_index] = entry;
+        entry->next = arp_table.arr[bucket_index];
+        arp_table.arr[bucket_index] = entry;
     }
 }
 
-
-void delete_entry(translation_table *table, uint32_t key) {
-    uint32_t bucket_index = hash_function(table, key);
+void delete_entry(uint32_t key) {
+    uint32_t bucket_index = hash_function(key);
     table_entry *temp = NULL;
-    table_entry *current = table->arr[bucket_index];
+    table_entry *current = arp_table.arr[bucket_index];
 
     while (current != NULL && current->key != key) {
         temp = current;
@@ -61,16 +58,16 @@ void delete_entry(translation_table *table, uint32_t key) {
 
     if (current == NULL)
         return;
-    if (current == table->arr[bucket_index])
-        table->arr[bucket_index] = current->next;
+    if (current == arp_table.arr[bucket_index])
+        arp_table.arr[bucket_index] = current->next;
     else
         temp->next = current->next;
     free(current);
 }
 
-table_entry *search(translation_table *table, uint32_t key) {
-    uint32_t bucket_index = hash_function(table, key);
-    table_entry *current = table->arr[bucket_index];
+table_entry *search(uint32_t key) {
+    uint32_t bucket_index = hash_function(key);
+    table_entry *current = arp_table.arr[bucket_index];
     while (current != NULL && current->key != key) {
         current = current->next;
     }
@@ -103,13 +100,13 @@ table_entry *search(translation_table *table, uint32_t key) {
  *             the same hardware on which the request was received.
 */
 
-void handle_arp(int tun_fd, eth_hdr *eth, translation_table* arp_table, dev* device) {
+void handle_arp(int tun_fd, eth_hdr *eth, tun_device* device) {
     arp_hdr *arp = parse_arp(eth->payload);
     if (ntohs(arp->hwtype) != ARP_HTYPE_ETHER || ntohs(arp->protype) != ARP_PTYPE_IPV4)
         return;
     arp_ipv4 *arp_data = parse_arp_ipv4(arp);
     bool merge_flag = false;
-    table_entry *entry = search(arp_table, arp_data->sip);
+    table_entry *entry = search(arp_data->sip);
     if (entry != NULL) {
         merge_flag = true;
         memcpy(entry->value, arp_data->smac, 6);
@@ -118,7 +115,7 @@ void handle_arp(int tun_fd, eth_hdr *eth, translation_table* arp_table, dev* dev
         return;
 
     if (!merge_flag)
-        insert(arp_table, arp_data->sip, arp_data->smac);
+        insert(arp_data->sip, arp_data->smac);
 
     if (ntohs(arp->opcode) != ARPOP_REQUEST)
         return;
@@ -133,5 +130,5 @@ void handle_arp(int tun_fd, eth_hdr *eth, translation_table* arp_table, dev* dev
     memcpy(eth->dmac, eth->smac, 6);
     memcpy(eth->smac, device->mac, 6);
     memcpy(eth->payload, (unsigned char*) arp, 20+8);
-    write(tun_fd, (unsigned char*) eth, 28 + 6 + 6 + 2);
+    write_tun((unsigned char*) eth, 28 + 6 + 6 + 2);
 }

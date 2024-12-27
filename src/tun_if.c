@@ -10,11 +10,11 @@
 #include "tun_if.h"
 
 
-int open_tun_dev(char *name, char *ip_addr, dev* device) {
+void open_tun_dev(char *name, char *ip_addr, tun_device* device) {
     struct ifreq ifr;
-    int fd, err;
+    int sock;
 
-    if ((fd = open("/dev/net/tun", O_RDWR)) < 0) {
+    if ((tun_fd = open("/dev/net/tun", O_RDWR)) < 0) {
         perror("Cannot open TUN/TAP device");
         exit(1);
     }
@@ -22,43 +22,42 @@ int open_tun_dev(char *name, char *ip_addr, dev* device) {
     memset(&ifr, 0, sizeof(ifr));
 
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-    if (name != NULL) {
-        strncpy(ifr.ifr_name, name, IFNAMSIZ);
+    if (name == NULL) {
+        printf("device name has to be set\n");
+        exit(1);
     }
+    strncpy(ifr.ifr_name, name, IFNAMSIZ);
 
-
-    if ((err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0) {
+    if (ioctl(tun_fd, TUNSETIFF, (void *) &ifr) < 0) {
         perror("Could not ioctl tun");
-        close(fd);
-        return err;
+        close(tun_fd);
+        exit(1);
     }
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         perror("Unable to create socket");
-        close(fd);
-        return -1;
+        close(tun_fd);
+        exit(1);
     }
     if (set_ip(&ifr, sock, ip_addr) < 0) {
-        close(fd);
-        return -1;
+        close(tun_fd);
+        exit(1);
     }
     device->ip_addrn = htonl(inet_network(ip_addr));
 
     ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
     if (ioctl(sock, SIOCSIFFLAGS, &ifr) < 0) {
         perror("Unable to set state to UP");
-        close(fd);
-        return -1;
+        close(tun_fd);
+        exit(1);
     }
 
     sleep(1);
     if (get_mac_address(&ifr, sock, device->mac) < 0) {
-        close(fd);
-        return -1;
+        close(tun_fd);
+        exit(1);
     }
-
-    return fd;
 }
 
 int set_ip(struct ifreq *ifr, int sock, char ip_addr[]) {
@@ -93,4 +92,16 @@ int get_mac_address(struct ifreq *ifr, int sock, unsigned char mac[6]) {
     }
     memcpy(mac, ifr->ifr_hwaddr.sa_data, 6);
     return 0;
+}
+
+void close_tun() {
+    close(tun_fd);
+}
+
+ssize_t read_tun(unsigned char* buffer, size_t size) {
+    return read(tun_fd, buffer, size);
+}
+
+void write_tun(unsigned char* buffer, size_t size) {
+    write(tun_fd, buffer, size);
 }

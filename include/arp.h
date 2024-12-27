@@ -1,7 +1,6 @@
 #ifndef ARP_H
 #define ARP_H
 
-#include <stdint.h>
 #include "ether.h"
 #include "tun_if.h"
 
@@ -54,23 +53,25 @@ typedef struct translation_table {
     int size;
 } translation_table;
 
-void set_entry(table_entry* node, uint32_t key, unsigned char value[6]);
+static translation_table arp_table;
 
-void init_translation_table(translation_table* table);
+void set_entry(table_entry *node, uint32_t key, unsigned char value[6]);
 
-uint32_t hash_function(translation_table* table, uint32_t key);
+void init_translation_table();
 
-void insert(translation_table* table, uint32_t key, unsigned char value[6]);
+uint32_t hash_function(uint32_t key);
 
-void delete_entry(translation_table* table, uint32_t key);
+void insert(uint32_t key, unsigned char value[6]);
 
-table_entry* search(translation_table* mp, uint32_t key);
+void delete_entry(uint32_t key);
+
+table_entry *search(uint32_t key);
 
 arp_hdr *parse_arp(unsigned char *buffer);
 
 arp_ipv4 *parse_arp_ipv4(arp_hdr *arp_hdr);
 
-void handle_arp(int tun_fd, eth_hdr *eth, translation_table* arp_table, dev* device);
+void handle_arp(int tun_fd, eth_hdr *eth, tun_device *device);
 
 #ifdef __cplusplus
 }
