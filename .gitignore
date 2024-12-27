@@ -67,4 +67,4 @@ dkms.conf
 
 build
 
-cmake-build-debug
+cmake-build-debug-wsl
