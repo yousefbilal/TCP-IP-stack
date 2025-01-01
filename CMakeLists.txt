@@ -10,6 +10,10 @@ add_executable(${PROJECT_NAME}
         src/utils.c
         src/ether.c
         src/arp.c
+        include/ip.h
+        src/ip.c
+        include/icmp.h
+        src/icmp.c
 )
 include_directories(./include)
 

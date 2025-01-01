@@ -31,4 +31,4 @@ void write_tun(unsigned char* buffer, size_t size);
 }
 #endif
 
-#endif
+#endif //TUN_IF_H

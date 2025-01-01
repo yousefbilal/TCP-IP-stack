@@ -25,4 +25,4 @@ void handle_eth_hdr(eth_hdr *hdr);
 }
 #endif
 
-#endif
+#endif //ETHER_H

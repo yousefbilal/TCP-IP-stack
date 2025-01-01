@@ -11,4 +11,4 @@ void print_mac(unsigned char mac[6]);
 }
 #endif
 
-#endif
+#endif //UTILS_H

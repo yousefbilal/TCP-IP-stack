@@ -71,7 +71,7 @@ arp_hdr *parse_arp(unsigned char *buffer);
 
 arp_ipv4 *parse_arp_ipv4(arp_hdr *arp_hdr);
 
-void handle_arp(int tun_fd, eth_hdr *eth, tun_device *device);
+void handle_arp(eth_hdr *eth, tun_device *device);
 
 #ifdef __cplusplus
 }

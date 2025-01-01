@@ -44,7 +44,9 @@ int main() {
         print_mac(hdr->dmac);
         switch (ethertype) {
             case ETH_P_ARP:
-                handle_arp(tun_fd, hdr, &device);
+                handle_arp(hdr, &device);
+                break;
+            case ETH_P_IP:
                 break;
             default:
                 printf("Unknown ethertype\n");

@@ -100,7 +100,7 @@ table_entry *search(uint32_t key) {
  *             the same hardware on which the request was received.
 */
 
-void handle_arp(int tun_fd, eth_hdr *eth, tun_device* device) {
+void handle_arp(eth_hdr *eth, tun_device* device) {
     arp_hdr *arp = parse_arp(eth->payload);
     if (ntohs(arp->hwtype) != ARP_HTYPE_ETHER || ntohs(arp->protype) != ARP_PTYPE_IPV4)
         return;
