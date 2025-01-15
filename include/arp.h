@@ -17,6 +17,10 @@ extern "C" {
 #define ARP_HTYPE_ETHER 1
 #define ARP_PTYPE_IPV4 0x0800
 
+#define ARP_HDR_SIZE 8
+#define ARP_IPV4_SIZE 20
+
+
 #define CAPACITY 5
 
 struct arp_hdr {

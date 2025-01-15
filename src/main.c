@@ -10,6 +10,7 @@
 #include "tun_if.h"
 #include "utils.h"
 #include "ether.h"
+#include "ip.h"
 
 static bool keep_running = true;
 
@@ -30,23 +31,23 @@ int main() {
 
     printf("MAC address of %s: ", DEVICE_NAME);
     print_mac(device.mac);
-    init_translation_table(arp_table);
-
+    init_translation_table();
+    uint16_t ethertype;
+    eth_hdr *eth = NULL;
     while (keep_running) {
-        if (read_tun(buffer, sizeof(buffer)))
+        if (read_tun(buffer, sizeof(buffer)) < 0)
             perror("Error reading from tun");
 
-        eth_hdr *hdr = parse_eth_hdr(buffer);
-        uint16_t ethertype = ntohs(hdr->ethertype);
-        printf("Source MAC:");
-        print_mac(hdr->smac);
-        printf("Destination MAC:");
-        print_mac(hdr->dmac);
+        eth = parse_eth_hdr(buffer);
+        ethertype = ntohs(eth->ethertype);
+
+        print_mac(eth->dmac);
         switch (ethertype) {
             case ETH_P_ARP:
-                handle_arp(hdr, &device);
+                handle_arp(eth, &device);
                 break;
             case ETH_P_IP:
+                handle_ip(eth, &device);
                 break;
             default:
                 printf("Unknown ethertype\n");

@@ -4,8 +4,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include "tun_if.h"
+#include <linux/if_ether.h>
+
+#include "ether.h"
 #include "arp.h"
+
 
 arp_hdr *parse_arp(unsigned char *buffer) {
     return (arp_hdr *) buffer;
@@ -100,7 +103,7 @@ table_entry *search(uint32_t key) {
  *             the same hardware on which the request was received.
 */
 
-void handle_arp(eth_hdr *eth, tun_device* device) {
+void handle_arp(eth_hdr *eth, tun_device *device) {
     arp_hdr *arp = parse_arp(eth->payload);
     if (ntohs(arp->hwtype) != ARP_HTYPE_ETHER || ntohs(arp->protype) != ARP_PTYPE_IPV4)
         return;
@@ -119,6 +122,7 @@ void handle_arp(eth_hdr *eth, tun_device* device) {
 
     if (ntohs(arp->opcode) != ARPOP_REQUEST)
         return;
+    // TODO: clean this
     uint32_t temp_ip = arp_data->sip;
     unsigned char *temp_mac = arp_data->smac;
     arp_data->sip = device->ip_addrn;
@@ -126,9 +130,7 @@ void handle_arp(eth_hdr *eth, tun_device* device) {
     arp_data->dip = temp_ip;
     memcpy(arp_data->dmac, temp_mac, 6);
     arp->opcode = htons(ARPOP_REPLY);
-    memcpy(arp->data, (unsigned char*) arp_data, 20);
-    memcpy(eth->dmac, eth->smac, 6);
-    memcpy(eth->smac, device->mac, 6);
-    memcpy(eth->payload, (unsigned char*) arp, 20+8);
-    write_tun((unsigned char*) eth, 28 + 6 + 6 + 2);
+    memcpy(arp->data, (unsigned char *) arp_data, ARP_IPV4_SIZE);
+
+    send_eth(device->mac, eth->smac, ETH_P_ARP, (unsigned char *) arp, ARP_HDR_SIZE + ARP_IPV4_SIZE);
 }
